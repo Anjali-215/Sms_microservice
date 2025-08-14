@@ -13,6 +13,7 @@ function Courses() {
   });
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchCourses();
@@ -21,9 +22,12 @@ function Courses() {
   const fetchCourses = async () => {
     try {
       const response = await axios.get('http://localhost:8001/courses/');
+      console.log('Fetched courses:', response.data);
       setCourses(response.data);
+      setError(null);
     } catch (error) {
       console.error('Error fetching courses:', error);
+      setError('Failed to fetch courses. Please try again.');
     }
   };
 
@@ -37,12 +41,24 @@ function Courses() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      if (isEditing) {
-        await axios.put(`http://localhost:8001/courses/${editingId}`, formData);
+      // Convert numeric fields to numbers
+      const dataToSubmit = {
+        ...formData,
+        credits: parseInt(formData.credits),
+        max_students: parseInt(formData.max_students),
+        enrolled_students: []  // Initialize empty array for new courses
+      };
+
+      if (isEditing && editingId) {
+        console.log('Updating course with ID:', editingId);
+        await axios.put(`http://localhost:8001/courses/${editingId}`, dataToSubmit);
       } else {
-        await axios.post('http://localhost:8001/courses/', formData);
+        console.log('Creating new course:', dataToSubmit);
+        const response = await axios.post('http://localhost:8001/courses/', dataToSubmit);
+        console.log('Created course:', response.data);
       }
-      fetchCourses();
+      
+      await fetchCourses();
       setFormData({
         code: '',
         name: '',
@@ -53,30 +69,57 @@ function Courses() {
       });
       setIsEditing(false);
       setEditingId(null);
+      setError(null);
     } catch (error) {
       console.error('Error saving course:', error);
+      if (error.response?.data?.detail) {
+        setError(error.response.data.detail);
+      } else {
+        setError('Failed to save course. Please try again.');
+      }
     }
   };
 
   const handleEdit = (course) => {
+    console.log('Editing course:', course);
+    const courseId = course._id || course.id;
+    if (!courseId) {
+      console.error('No course ID found:', course);
+      setError('Cannot edit course: No ID found');
+      return;
+    }
     setIsEditing(true);
-    setEditingId(course.id);
+    setEditingId(courseId);
     setFormData({
       code: course.code,
       name: course.name,
       description: course.description,
-      credits: course.credits,
+      credits: course.credits.toString(),
       instructor: course.instructor,
-      max_students: course.max_students
+      max_students: course.max_students.toString()
     });
+    setError(null);
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (course) => {
     try {
-      await axios.delete(`http://localhost:8001/courses/${id}`);
-      fetchCourses();
+      const courseId = course._id || course.id;
+      if (!courseId) {
+        console.error('No course ID found:', course);
+        setError('Cannot delete course: No ID found');
+        return;
+      }
+      console.log('Deleting course with ID:', courseId);
+      await axios.delete(`http://localhost:8001/courses/${courseId}`);
+      await fetchCourses();
+      setError(null);
     } catch (error) {
       console.error('Error deleting course:', error);
+      if (error.response?.data?.detail) {
+        setError(error.response.data.detail);
+      } else {
+        setError('Failed to delete course. Please try again.');
+      }
     }
   };
 
@@ -84,6 +127,12 @@ function Courses() {
     <div className="container mx-auto px-4">
       <h2 className="text-2xl font-bold mb-4">Courses Management</h2>
       
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+          <span className="block sm:inline">{error}</span>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="mb-8 bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -94,6 +143,7 @@ function Courses() {
                 name="code"
                 value={formData.code}
                 onChange={handleInputChange}
+                required
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               />
             </label>
@@ -106,6 +156,7 @@ function Courses() {
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
+                required
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               />
             </label>
@@ -117,6 +168,7 @@ function Courses() {
                 name="description"
                 value={formData.description}
                 onChange={handleInputChange}
+                required
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               />
             </label>
@@ -129,6 +181,8 @@ function Courses() {
                 name="credits"
                 value={formData.credits}
                 onChange={handleInputChange}
+                required
+                min="1"
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               />
             </label>
@@ -141,6 +195,7 @@ function Courses() {
                 name="instructor"
                 value={formData.instructor}
                 onChange={handleInputChange}
+                required
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               />
             </label>
@@ -153,6 +208,8 @@ function Courses() {
                 name="max_students"
                 value={formData.max_students}
                 onChange={handleInputChange}
+                required
+                min="1"
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               />
             </label>
@@ -181,29 +238,37 @@ function Courses() {
             </tr>
           </thead>
           <tbody className="text-gray-600 text-sm font-light">
-            {courses.map((course) => (
-              <tr key={course.id} className="border-b border-gray-200 hover:bg-gray-100">
-                <td className="py-3 px-6 text-left">{course.code}</td>
-                <td className="py-3 px-6 text-left">{course.name}</td>
-                <td className="py-3 px-6 text-left">{course.instructor}</td>
-                <td className="py-3 px-6 text-center">{course.credits}</td>
-                <td className="py-3 px-6 text-center">{course.max_students}</td>
-                <td className="py-3 px-6 text-center">
-                  <button
-                    onClick={() => handleEdit(course)}
-                    className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-3 rounded mr-2"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(course.id)}
-                    className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded"
-                  >
-                    Delete
-                  </button>
+            {courses.length === 0 ? (
+              <tr>
+                <td colSpan="6" className="py-4 px-6 text-center">
+                  No courses found. Add one above!
                 </td>
               </tr>
-            ))}
+            ) : (
+              courses.map((course) => (
+                <tr key={course._id || course.id} className="border-b border-gray-200 hover:bg-gray-100">
+                  <td className="py-3 px-6 text-left">{course.code}</td>
+                  <td className="py-3 px-6 text-left">{course.name}</td>
+                  <td className="py-3 px-6 text-left">{course.instructor}</td>
+                  <td className="py-3 px-6 text-center">{course.credits}</td>
+                  <td className="py-3 px-6 text-center">{course.max_students}</td>
+                  <td className="py-3 px-6 text-center">
+                    <button
+                      onClick={() => handleEdit(course)}
+                      className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-3 rounded mr-2"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(course)}
+                      className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
