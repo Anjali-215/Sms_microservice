@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import Alert from './Alert';
 
 function CourseEnrollment({ studentId, onEnrollmentComplete }) {
   const [courses, setCourses] = useState([]);
@@ -80,22 +81,23 @@ function CourseEnrollment({ studentId, onEnrollmentComplete }) {
     <div className="mt-4">
       <h4 className="text-lg font-semibold mb-2">Available Courses</h4>
       
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
-          {error}
-        </div>
-      )}
+             {error && (
+         <Alert
+           type="error"
+           message={error}
+           duration={5000}
+           onClose={() => setError(null)}
+         />
+       )}
       
-      {success && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4 animate-fade-in">
-          <div className="flex items-center">
-            <svg className="h-5 w-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>{success}</span>
-          </div>
-        </div>
-      )}
+             {success && (
+         <Alert
+           type="success"
+           message={success}
+           duration={5000}
+           onClose={() => setSuccess('')}
+         />
+       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {courses.map((course) => (
