@@ -45,7 +45,7 @@ class Course(BaseModel):
         
         data_dict = dict(data)
         if "_id" in data_dict:
-            data_dict["id"] = str(data_dict["_id"])
+            data_dict["_id"] = str(data_dict["_id"])  # Use _id instead of id
         return cls(**data_dict)
 
 class CourseUpdate(BaseModel):

@@ -4,6 +4,7 @@ import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import Students from './components/Students';
 import Courses from './components/Courses';
+import CourseEnrollments from './components/CourseEnrollments';
 import LoadingScreen from './components/LoadingScreen';
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/students" element={<Students />} />
             <Route path="/courses" element={<Courses />} />
+            <Route path="/enrollments" element={<CourseEnrollments />} />
           </Routes>
         </div>
       </main>

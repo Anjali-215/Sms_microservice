@@ -7,3 +7,4 @@ email-validator==2.0.0
 python-multipart==0.0.6
 dnspython==2.3.0
 pymongo==4.3.3
+httpx==0.24.0
